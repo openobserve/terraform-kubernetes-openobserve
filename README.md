@@ -208,6 +208,74 @@ registry.terraform.io/modules/openobserve/openobserve/kubernetes
 ---
 
 <!-- BEGIN_TF_DOCS -->
+## Requirements
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | >= 1.9 |
+| <a name="requirement_helm"></a> [helm](#requirement_helm) | ~> 2.16 |
+| <a name="requirement_kubernetes"></a> [kubernetes](#requirement_kubernetes) | ~> 2.35 |
+
+## Providers
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_helm"></a> [helm](#provider_helm) | ~> 2.16 |
+
+## Inputs
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_affinity"></a> [affinity](#input_affinity) | Pod affinity/anti-affinity rules per component. | <pre>object({<br/>    ingester     = optional(any, {})<br/>    querier      = optional(any, {})<br/>    router       = optional(any, {})<br/>    compactor    = optional(any, {})<br/>    alertmanager = optional(any, {})<br/>  })</pre> | `{}` | no |
+| <a name="input_atomic"></a> [atomic](#input_atomic) | Automatically roll back the release on install/upgrade failure. | `bool` | `false` | no |
+| <a name="input_auth"></a> [auth](#input_auth) | Authentication credentials. All values are stored in a Kubernetes Secret.<br/>root_user_email and root_user_password are required.<br/>Provide s3_access_key / s3_secret_key for AWS-signature S3 auth.<br/>Provide postgres_dsn for PostgreSQL metadata store. | <pre>object({<br/>    root_user_email    = string<br/>    root_user_password = string<br/>    root_user_token    = optional(string, "")<br/>    s3_access_key      = optional(string, "")<br/>    s3_secret_key      = optional(string, "")<br/>    postgres_dsn       = optional(string, "")<br/>    postgres_ro_dsn    = optional(string, "")<br/>  })</pre> | n/a | yes |
+| <a name="input_chart_version"></a> [chart_version](#input_chart_version) | Version of the openobserve Helm chart. Pin this for reproducible deployments. | `string` | `"0.80.3"` | no |
+| <a name="input_cleanup_on_fail"></a> [cleanup_on_fail](#input_cleanup_on_fail) | Delete newly created resources when an upgrade fails. | `bool` | `false` | no |
+| <a name="input_cluster_coordinator"></a> [cluster_coordinator](#input_cluster_coordinator) | Cluster coordination backend. 'nats' is required for multi-node deployments. | `string` | `"nats"` | no |
+| <a name="input_config"></a> [config](#input_config) | Raw ZO_* environment variable overrides merged on top of module-managed config.<br/>Use for settings not exposed as first-class variables.<br/>Example: { "ZO_HTTP_WORKER_NUM" = "8", "ZO_QUERY_TIMEOUT" = "300" } | `map(string)` | `{}` | no |
+| <a name="input_create_namespace"></a> [create_namespace](#input_create_namespace) | Create the Kubernetes namespace if it does not exist. | `bool` | `true` | no |
+| <a name="input_data_retention_days"></a> [data_retention_days](#input_data_retention_days) | Days to retain data before compaction removes it (ZO_COMPACT_DATA_RETENTION_DAYS). | `number` | `3650` | no |
+| <a name="input_extra_values"></a> [extra_values](#input_extra_values) | List of raw YAML value strings merged last (highest precedence).<br/>Use for helm chart sections not exposed as variables.<br/>Example: [<<-EOT<br/>  enterprise:<br/>    enabled: true<br/>EOT] | `list(string)` | `[]` | no |
+| <a name="input_image"></a> [image](#input_image) | Container image configuration.<br/>Set repository to 'o2cr.ai/openobserve/openobserve-enterprise' for the enterprise edition.<br/>Leave tag empty to use the chart's default version. | <pre>object({<br/>    repository  = optional(string, "o2cr.ai/openobserve/openobserve")<br/>    tag         = optional(string, "")<br/>    pull_policy = optional(string, "IfNotPresent")<br/>  })</pre> | `{}` | no |
+| <a name="input_image_pull_secrets"></a> [image_pull_secrets](#input_image_pull_secrets) | List of Kubernetes Secret names used to pull the container image. | `list(string)` | `[]` | no |
+| <a name="input_ingress"></a> [ingress](#input_ingress) | Ingress configuration. Enable to expose OpenObserve externally.<br/>Requires an Ingress controller (e.g. nginx-ingress) in the cluster.<br/>Set tls_secret_name to enable HTTPS with cert-manager. | <pre>object({<br/>    enabled         = optional(bool, false)<br/>    class_name      = optional(string, "nginx")<br/>    host            = optional(string, "")<br/>    annotations     = optional(map(string), {})<br/>    tls_secret_name = optional(string, "")<br/>  })</pre> | `{}` | no |
+| <a name="input_meta_store"></a> [meta_store](#input_meta_store) | Metadata storage backend. Use 'postgres' for all HA deployments. | `string` | `"postgres"` | no |
+| <a name="input_minio"></a> [minio](#input_minio) | MinIO dependency bundled with the chart. Disable when using AWS S3 or an external MinIO instance. | <pre>object({<br/>    enabled = optional(bool, false)<br/>  })</pre> | `{}` | no |
+| <a name="input_namespace"></a> [namespace](#input_namespace) | Kubernetes namespace to deploy OpenObserve into. | `string` | `"openobserve"` | no |
+| <a name="input_nats"></a> [nats](#input_nats) | NATS dependency bundled with the chart. Disable when using an external NATS cluster. | <pre>object({<br/>    enabled = optional(bool, true)<br/>  })</pre> | `{}` | no |
+| <a name="input_node_selector"></a> [node_selector](#input_node_selector) | Node selector labels per component. Keys follow the per-component pattern used by the chart (ingester, querier, router, compactor, alertmanager). | <pre>object({<br/>    ingester     = optional(map(string), {})<br/>    querier      = optional(map(string), {})<br/>    router       = optional(map(string), {})<br/>    compactor    = optional(map(string), {})<br/>    alertmanager = optional(map(string), {})<br/>  })</pre> | `{}` | no |
+| <a name="input_persistence"></a> [persistence](#input_persistence) | Persistent volume configuration per component. Storage class defaults to the cluster default when empty. | <pre>object({<br/>    ingester = optional(object({<br/>      enabled       = optional(bool, true)<br/>      size          = optional(string, "100Gi")<br/>      storage_class = optional(string, "")<br/>      access_modes  = optional(list(string), ["ReadWriteOnce"])<br/>    }), {})<br/>    querier = optional(object({<br/>      enabled       = optional(bool, true)<br/>      size          = optional(string, "100Gi")<br/>      storage_class = optional(string, "")<br/>      access_modes  = optional(list(string), ["ReadWriteOnce"])<br/>    }), {})<br/>    alertmanager = optional(object({<br/>      enabled       = optional(bool, true)<br/>      size          = optional(string, "10Gi")<br/>      storage_class = optional(string, "")<br/>      access_modes  = optional(list(string), ["ReadWriteOnce"])<br/>    }), {})<br/>  })</pre> | `{}` | no |
+| <a name="input_queue_store"></a> [queue_store](#input_queue_store) | Distributed queue backend. 'nats' is required for multi-node deployments. | `string` | `"nats"` | no |
+| <a name="input_release_name"></a> [release_name](#input_release_name) | Name of the Helm release. | `string` | `"openobserve"` | no |
+| <a name="input_replica_count"></a> [replica_count](#input_replica_count) | Number of replicas per component. Increase querier/ingester for HA; router is stateless and scales horizontally. | <pre>object({<br/>    ingester     = optional(number, 1)<br/>    querier      = optional(number, 1)<br/>    router       = optional(number, 1)<br/>    compactor    = optional(number, 1)<br/>    alertmanager = optional(number, 1)<br/>  })</pre> | `{}` | no |
+| <a name="input_resources"></a> [resources](#input_resources) | CPU/memory resource requests and limits per component.<br/>Example:<br/>  resources = {<br/>    ingester = { requests = { memory = "2Gi", cpu = "500m" }, limits = { memory = "8Gi", cpu = "2000m" } }<br/>    querier  = { requests = { memory = "2Gi", cpu = "500m" }, limits = { memory = "8Gi" } }<br/>  } | `any` | `{}` | no |
+| <a name="input_s3"></a> [s3](#input_s3) | S3-compatible object storage configuration.<br/>OpenObserve uses S3 for long-term data persistence.<br/>Set server_url to use MinIO or other S3-compatible providers. | <pre>object({<br/>    provider      = optional(string, "s3")<br/>    region        = optional(string, "us-east-1")<br/>    bucket_name   = optional(string, "")<br/>    server_url    = optional(string, "")<br/>    bucket_prefix = optional(string, "")<br/>  })</pre> | `{}` | no |
+| <a name="input_service"></a> [service](#input_service) | Kubernetes Service configuration for the router component. | <pre>object({<br/>    type      = optional(string, "ClusterIP")<br/>    http_port = optional(number, 5080)<br/>    grpc_port = optional(number, 5081)<br/>  })</pre> | `{}` | no |
+| <a name="input_timeout"></a> [timeout](#input_timeout) | Timeout in seconds for Helm install/upgrade operations. | `number` | `600` | no |
+| <a name="input_tolerations"></a> [tolerations](#input_tolerations) | Pod tolerations per component. Each element is a Kubernetes toleration object. | <pre>object({<br/>    ingester     = optional(list(any), [])<br/>    querier      = optional(list(any), [])<br/>    router       = optional(list(any), [])<br/>    compactor    = optional(list(any), [])<br/>    alertmanager = optional(list(any), [])<br/>  })</pre> | `{}` | no |
+| <a name="input_wait"></a> [wait](#input_wait) | Wait for all pods and services to be ready before marking the release as successful. | `bool` | `true` | no |
+
+## Outputs
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_app_version"></a> [app_version](#output_app_version) | Application version reported by the Helm chart metadata. |
+| <a name="output_chart_version"></a> [chart_version](#output_chart_version) | Version of the deployed Helm chart. |
+| <a name="output_grpc_endpoint"></a> [grpc_endpoint](#output_grpc_endpoint) | In-cluster gRPC endpoint used by OpenTelemetry exporters. |
+| <a name="output_http_endpoint"></a> [http_endpoint](#output_http_endpoint) | In-cluster HTTP endpoint for the OpenObserve UI and ingestion API. |
+| <a name="output_ingress_host"></a> [ingress_host](#output_ingress_host) | Ingress hostname, or empty string when ingress is disabled. |
+| <a name="output_namespace"></a> [namespace](#output_namespace) | Kubernetes namespace where OpenObserve is deployed. |
+| <a name="output_release_name"></a> [release_name](#output_release_name) | Name of the deployed Helm release. |
+| <a name="output_service_name"></a> [service_name](#output_service_name) | Kubernetes Service name for the OpenObserve router (entry point for all traffic). |
+| <a name="output_status"></a> [status](#output_status) | Current Helm release status (e.g. deployed, failed). |
 <!-- END_TF_DOCS -->
 
 ---
