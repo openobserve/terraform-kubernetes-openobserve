@@ -1,0 +1,5 @@
+# Copy this file to terraform.tfvars and fill in the values.
+# Never commit terraform.tfvars to version control.
+
+root_user_email    = "admin@example.com"
+root_user_password = "ChangeMe123!"

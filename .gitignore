@@ -1,0 +1,109 @@
+# =============================================================================
+# Terraform
+# =============================================================================
+
+# Local .terraform directory (downloaded providers and modules)
+**/.terraform/
+
+# Terraform lock file — commit this in root configurations (environments),
+# not in reusable modules. Remove this line if consuming this module directly.
+**/.terraform.lock.hcl
+
+# State files — NEVER commit these; they may contain secrets
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Plan files — binary artifacts; treat as sensitive (may contain secrets)
+*.tfplan
+*.tfplan.json
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Override files — local developer workarounds, not for sharing
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# =============================================================================
+# Variable files — secrets live here
+# =============================================================================
+
+# *.tfvars files often contain real secrets. Only commit *.tfvars.example files.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+
+# =============================================================================
+# CI / tooling artifacts
+# =============================================================================
+
+# terraform-docs output cache
+.terraform-docs-cache/
+
+# TFLint cache
+.tflint.d/
+
+# Checkov / Trivy reports
+checkov-report.*
+trivy-report.*
+results.sarif
+
+# =============================================================================
+# OS generated files
+# =============================================================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# =============================================================================
+# IDE and editors
+# =============================================================================
+
+# JetBrains (IntelliJ, GoLand, etc.)
+.idea/
+*.iml
+*.iws
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*#
+.#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# =============================================================================
+# Secrets / credentials — belt-and-suspenders catch
+# =============================================================================
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+kubeconfig
+kubeconfig.*

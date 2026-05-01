@@ -1,0 +1,49 @@
+formatter: "markdown table"
+
+version: ">=0.19"
+
+sections:
+  show:
+    - requirements
+    - providers
+    - inputs
+    - outputs
+
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+content: |-
+  ## Requirements
+
+  {{ .Requirements }}
+
+  ## Providers
+
+  {{ .Providers }}
+
+  ## Inputs
+
+  {{ .Inputs }}
+
+  ## Outputs
+
+  {{ .Outputs }}
+
+settings:
+  anchor: true
+  color: true
+  default: true
+  description: true
+  escape: false
+  hide-empty: false
+  html: true
+  indent: 2
+  lockfile: false
+  required: true
+  sensitive: true
+  type: true

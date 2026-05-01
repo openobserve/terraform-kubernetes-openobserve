@@ -1,0 +1,22 @@
+# Copy this file to terraform.tfvars and fill in all values.
+# Never commit terraform.tfvars to version control.
+
+root_user_email    = "admin@example.com"
+root_user_password = "ChangeMe123!"
+
+# PostgreSQL connection string (Cloud Native PG, RDS, etc.)
+postgres_dsn = "postgres://openobserve:password@postgres.openobserve.svc.cluster.local:5432/openobserve"
+
+# S3 object storage
+s3_bucket_name = "my-openobserve-data"
+s3_region      = "us-east-1"
+# Leave empty to use IRSA / instance profile instead of static credentials
+s3_access_key = ""
+s3_secret_key = ""
+
+# Ingress
+ingress_host       = "openobserve.example.com"
+ingress_tls_secret = "" # cert-manager will create this automatically
+
+# StorageClass (empty = cluster default)
+storage_class = "gp3"

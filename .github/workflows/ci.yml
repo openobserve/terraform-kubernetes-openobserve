@@ -1,0 +1,217 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "CHANGELOG.md"
+      - ".release-please-manifest.json"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "~1.9"
+  TF_IN_AUTOMATION: "true"
+  # Provider cache shared across jobs via cache action
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform/plugin-cache
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Format — fastest gate; fail fast before anything else runs
+  # ---------------------------------------------------------------------------
+  fmt:
+    name: terraform fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive -diff
+
+  # ---------------------------------------------------------------------------
+  # 2. Validate — matrix across root module + both examples
+  # ---------------------------------------------------------------------------
+  validate:
+    name: terraform validate / ${{ matrix.target.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - path: "."
+            name: "root"
+          - path: "examples/minimal"
+            name: "examples/minimal"
+          - path: "examples/complete"
+            name: "examples/complete"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-${{ matrix.target.name }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', matrix.target.path), 'versions.tf') }}
+          restore-keys: terraform-providers-
+
+      - name: Create plugin cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: terraform init
+        run: terraform -chdir=${{ matrix.target.path }} init -backend=false
+
+      - name: terraform validate
+        run: terraform -chdir=${{ matrix.target.path }} validate
+
+  # ---------------------------------------------------------------------------
+  # 3. Lint with TFLint
+  # ---------------------------------------------------------------------------
+  lint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Cache TFLint plugins
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-plugins-${{ hashFiles('.tflint.hcl') }}
+
+      - name: Init TFLint plugins
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Lint root module
+        run: tflint --format=compact --color
+
+      - name: Lint examples
+        run: |
+          for dir in examples/*/; do
+            echo "::group::Linting $dir"
+            tflint --chdir="$dir" --format=compact --color
+            echo "::endgroup::"
+          done
+
+  # ---------------------------------------------------------------------------
+  # 4. Security scans — Trivy (hard fail) + Checkov (soft fail)
+  # ---------------------------------------------------------------------------
+  security:
+    name: security scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # for SARIF upload
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy — IaC config scan (CRITICAL + HIGH)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          format: table
+        # Trivy returns 1 on findings — this step is a hard gate
+
+      - name: Checkov — policy-as-code scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: true
+          output_format: cli
+          download_external_modules: false
+
+  # ---------------------------------------------------------------------------
+  # 5. Terraform native tests — mock providers, no cluster needed
+  #    Runs after fmt + validate pass to avoid wasting time
+  # ---------------------------------------------------------------------------
+  test:
+    name: terraform test
+    runs-on: ubuntu-latest
+    needs: [fmt, validate]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-providers-root-${{ hashFiles('.terraform.lock.hcl', 'versions.tf') }}
+          restore-keys: terraform-providers-
+
+      - name: Create plugin cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: terraform init
+        run: terraform init -backend=false
+
+      - name: terraform test
+        run: terraform test --verbose
+
+  # ---------------------------------------------------------------------------
+  # 6. Docs check — README inputs/outputs table must stay in sync
+  # ---------------------------------------------------------------------------
+  docs:
+    name: terraform-docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check README is up-to-date
+        uses: terraform-docs/gh-actions@v1
+        with:
+          working-dir: .
+          output-file: README.md
+          output-method: inject
+          fail-on-diff: "true"
+
+  # ---------------------------------------------------------------------------
+  # 7. Status gate — single required check for branch protection
+  # ---------------------------------------------------------------------------
+  ci-pass:
+    name: CI passed
+    runs-on: ubuntu-latest
+    needs: [fmt, validate, lint, security, test, docs]
+    if: always()
+    steps:
+      - name: Evaluate results
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "$results" | jq -e '
+            to_entries
+            | map(select(.value.result != "success" and .value.result != "skipped"))
+            | if length == 0 then "All checks passed" | halt
+              else "Failed jobs: " + map(.key) + [""] | join(", ") | halt_error(1)
+              end
+          '
