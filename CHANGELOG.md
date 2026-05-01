@@ -10,6 +10,13 @@ Releases: automated from [Conventional Commits](https://www.conventionalcommits.
 
 <!-- Release notes below this line are managed automatically by release-please -->
 
+## [0.0.2](https://github.com/openobserve/terraform-kubernetes-openobserve/compare/v0.0.1...v0.0.2) (2026-05-01)
+
+
+### Bug Fixes
+
+* resolve all CI failures ([8ee9983](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/8ee99838a29974524145ecc6be138ee8ff716ae6))
+
 ## [0.0.1] - 2026-04-30
 
 ### 🚀 Initial Release
