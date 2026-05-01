@@ -20,12 +20,11 @@ permissions:
 env:
   TF_VERSION: "~1.9"
   TF_IN_AUTOMATION: "true"
-  # Provider cache shared across jobs via cache action
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform/plugin-cache
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 1. Format — fastest gate; fail fast before anything else runs
+  # 1. Format — fastest gate; runs first
   # ---------------------------------------------------------------------------
   fmt:
     name: terraform fmt
@@ -69,8 +68,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: terraform-providers-${{ matrix.target.name }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', matrix.target.path), 'versions.tf') }}
-          restore-keys: terraform-providers-
+          key: tf-providers-${{ matrix.target.name }}-${{ hashFiles('versions.tf') }}
+          restore-keys: tf-providers-
 
       - name: Create plugin cache dir
         run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
@@ -117,26 +116,25 @@ jobs:
           done
 
   # ---------------------------------------------------------------------------
-  # 4. Security scans — Trivy (hard fail) + Checkov (soft fail)
+  # 4. Security scans — Trivy (hard fail on CRITICAL/HIGH) + Checkov (soft)
   # ---------------------------------------------------------------------------
   security:
     name: security scan
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write  # for SARIF upload
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Trivy — IaC config scan (CRITICAL + HIGH)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: config
           scan-ref: .
           severity: CRITICAL,HIGH
           exit-code: "1"
           format: table
-        # Trivy returns 1 on findings — this step is a hard gate
 
       - name: Checkov — policy-as-code scan
         uses: bridgecrewio/checkov-action@v12
@@ -149,7 +147,6 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # 5. Terraform native tests — mock providers, no cluster needed
-  #    Runs after fmt + validate pass to avoid wasting time
   # ---------------------------------------------------------------------------
   test:
     name: terraform test
@@ -167,8 +164,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: terraform-providers-root-${{ hashFiles('.terraform.lock.hcl', 'versions.tf') }}
-          restore-keys: terraform-providers-
+          key: tf-providers-root-${{ hashFiles('versions.tf') }}
+          restore-keys: tf-providers-
 
       - name: Create plugin cache dir
         run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
@@ -180,15 +177,34 @@ jobs:
         run: terraform test --verbose
 
   # ---------------------------------------------------------------------------
-  # 6. Docs check — README inputs/outputs table must stay in sync
+  # 6. Docs — auto-generate on push to main; fail-on-diff on PRs
   # ---------------------------------------------------------------------------
   docs:
     name: terraform-docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the PR head so the push goes to the right branch
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check README is up-to-date
+      - name: Auto-update README (push to main)
+        if: github.event_name == 'push'
+        uses: terraform-docs/gh-actions@v1
+        with:
+          working-dir: .
+          output-file: README.md
+          output-method: inject
+          git-push: "true"
+          git-push-user-name: "github-actions[bot]"
+          git-push-user-email: "github-actions[bot]@users.noreply.github.com"
+          git-commit-message: "docs: regenerate terraform-docs [skip ci]"
+
+      - name: Check README is up-to-date (PR)
+        if: github.event_name == 'pull_request'
         uses: terraform-docs/gh-actions@v1
         with:
           working-dir: .
@@ -197,7 +213,7 @@ jobs:
           fail-on-diff: "true"
 
   # ---------------------------------------------------------------------------
-  # 7. Status gate — single required check for branch protection
+  # 7. Status gate — single required check for branch protection rules
   # ---------------------------------------------------------------------------
   ci-pass:
     name: CI passed
@@ -205,13 +221,17 @@ jobs:
     needs: [fmt, validate, lint, security, test, docs]
     if: always()
     steps:
-      - name: Evaluate results
+      - name: Evaluate job results
         run: |
-          results='${{ toJSON(needs) }}'
-          echo "$results" | jq -e '
-            to_entries
-            | map(select(.value.result != "success" and .value.result != "skipped"))
-            | if length == 0 then "All checks passed" | halt
-              else "Failed jobs: " + map(.key) + [""] | join(", ") | halt_error(1)
-              end
-          '
+          echo '${{ toJSON(needs) }}' > /tmp/results.json
+          failed=$(jq -r '
+            to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | .key
+          ' /tmp/results.json | paste -sd ', ' -)
+
+          if [ -n "$failed" ]; then
+            echo "❌ Failed jobs: $failed"
+            exit 1
+          fi
+          echo "✅ All checks passed"

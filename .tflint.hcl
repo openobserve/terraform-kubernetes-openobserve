@@ -14,10 +14,6 @@ rule "terraform_naming_convention" {
   output {
     format = "snake_case"
   }
-
-  local {
-    format = "snake_case"
-  }
 }
 
 # Require descriptions on all variables and outputs
