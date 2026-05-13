@@ -6,6 +6,7 @@
 
 mock_provider "helm" {}
 mock_provider "kubernetes" {}
+mock_provider "aws" {}
 
 # -------------------------------------------------------------------------
 # Default configuration
