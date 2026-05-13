@@ -213,7 +213,7 @@ registry.terraform.io/modules/openobserve/openobserve/kubernetes
 ## Requirements
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | >= 1.9 |
 | <a name="requirement_aws"></a> [aws](#requirement_aws) | ~> 5.0 |
 | <a name="requirement_helm"></a> [helm](#requirement_helm) | ~> 2.16 |
@@ -224,7 +224,7 @@ registry.terraform.io/modules/openobserve/openobserve/kubernetes
 ## Providers
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="provider_helm"></a> [helm](#provider_helm) | ~> 2.16 |
 
 ## Inputs
@@ -232,7 +232,7 @@ registry.terraform.io/modules/openobserve/openobserve/kubernetes
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
+|------|-------------|------|---------|:--------:|
 | <a name="input_affinity"></a> [affinity](#input_affinity) | Pod affinity/anti-affinity rules per component. | <pre>object({<br/>    ingester     = optional(any, {})<br/>    querier      = optional(any, {})<br/>    router       = optional(any, {})<br/>    compactor    = optional(any, {})<br/>    alertmanager = optional(any, {})<br/>  })</pre> | `{}` | no |
 | <a name="input_atomic"></a> [atomic](#input_atomic) | Automatically roll back the release on install/upgrade failure. | `bool` | `false` | no |
 | <a name="input_auth"></a> [auth](#input_auth) | Authentication credentials. All values are stored in a Kubernetes Secret.<br/>root_user_email and root_user_password are required.<br/>Provide s3_access_key / s3_secret_key for AWS-signature S3 auth.<br/>Provide postgres_dsn for PostgreSQL metadata store. | <pre>object({<br/>    root_user_email    = string<br/>    root_user_password = string<br/>    root_user_token    = optional(string, "")<br/>    s3_access_key      = optional(string, "")<br/>    s3_secret_key      = optional(string, "")<br/>    postgres_dsn       = optional(string, "")<br/>    postgres_ro_dsn    = optional(string, "")<br/>  })</pre> | n/a | yes |
@@ -270,7 +270,7 @@ registry.terraform.io/modules/openobserve/openobserve/kubernetes
 ## Outputs
 
 | Name | Description |
-| ---- | ----------- |
+|------|-------------|
 | <a name="output_app_version"></a> [app_version](#output_app_version) | Application version reported by the Helm chart metadata. |
 | <a name="output_aws_infrastructure"></a> [aws_infrastructure](#output_aws_infrastructure) | AWS resource details created by the module. Null when create_aws_infrastructure = false. |
 | <a name="output_capacity_recommendations"></a> [capacity_recommendations](#output_capacity_recommendations) | Capacity planning recommendations derived from your ingestion_gb_per_day input.<br/>Use these to right-size replicas, EKS nodes, and plan AWS spend before applying.<br/>Set capacity.ingestion_gb_per_day to enable. |
