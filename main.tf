@@ -1,3 +1,29 @@
+# ---------------------------------------------------------------------------
+# AWS infrastructure (only when create_aws_infrastructure = true)
+# ---------------------------------------------------------------------------
+
+module "aws_infrastructure" {
+  count  = var.create_aws_infrastructure ? 1 : 0
+  source = "./modules/aws-infrastructure"
+
+  cluster_name       = var.release_name
+  region             = var.aws_config.region
+  vpc_cidr           = var.aws_config.vpc_cidr
+  availability_zones = var.aws_config.availability_zones
+  s3_bucket_name     = var.aws_config.s3_bucket_name != "" ? var.aws_config.s3_bucket_name : "${var.release_name}-data"
+  s3_force_destroy   = var.aws_config.s3_force_destroy
+  tags               = var.aws_config.tags
+
+  # Use capacity recommendations when aws_config doesn't override them
+  node_instance_type = var.aws_config.node_instance_type != "" ? var.aws_config.node_instance_type : local.recommended_instance_type
+  node_min_count     = var.aws_config.node_min_count
+  node_max_count     = var.aws_config.node_max_count
+  node_desired_count = var.aws_config.node_desired_count > 0 ? var.aws_config.node_desired_count : local.recommended_node_count
+
+  kubernetes_namespace        = var.namespace
+  openobserve_service_account = var.release_name
+}
+
 locals {
   # Omit tag when empty so the chart's pinned default is preserved
   image_config = merge(
@@ -14,11 +40,11 @@ locals {
     imagePullSecrets = [for s in var.image_pull_secrets : { name = s }]
 
     replicaCount = {
-      ingester     = var.replica_count.ingester
-      querier      = var.replica_count.querier
-      router       = var.replica_count.router
-      compactor    = var.replica_count.compactor
-      alertmanager = var.replica_count.alertmanager
+      ingester     = local.recommended_replicas.ingester
+      querier      = local.recommended_replicas.querier
+      router       = local.recommended_replicas.router
+      compactor    = local.recommended_replicas.compactor
+      alertmanager = local.recommended_replicas.alertmanager
     }
 
     # Credentials land in a Kubernetes Secret; never stored in ConfigMap
@@ -32,15 +58,17 @@ locals {
       ZO_META_POSTGRES_RO_DSN = var.auth.postgres_ro_dsn
     }
 
-    # Module-managed ZO_* vars merged with caller overrides; caller wins
+    # Module-managed ZO_* vars merged with caller overrides; caller wins.
+    # When create_aws_infrastructure = true the S3 bucket/region come from
+    # the aws_infrastructure submodule output and override var.s3.
     config = merge(
       {
         ZO_META_STORE                  = var.meta_store
         ZO_CLUSTER_COORDINATOR         = var.cluster_coordinator
         ZO_QUEUE_STORE                 = var.queue_store
         ZO_S3_PROVIDER                 = var.s3.provider
-        ZO_S3_REGION_NAME              = var.s3.region
-        ZO_S3_BUCKET_NAME              = var.s3.bucket_name
+        ZO_S3_REGION_NAME              = var.create_aws_infrastructure ? module.aws_infrastructure[0].s3_bucket_region : var.s3.region
+        ZO_S3_BUCKET_NAME              = var.create_aws_infrastructure ? module.aws_infrastructure[0].s3_bucket_name : var.s3.bucket_name
         ZO_S3_SERVER_URL               = var.s3.server_url
         ZO_S3_BUCKET_PREFIX            = var.s3.bucket_prefix
         ZO_COMPACT_DATA_RETENTION_DAYS = tostring(var.data_retention_days)
@@ -125,9 +153,19 @@ resource "helm_release" "this" {
   chart      = "openobserve"
   version    = var.chart_version
 
-  # Module-computed values have lowest precedence; extra_values strings win
+  # Module-computed values have lowest precedence; extra_values strings win.
+  # When create_aws_infrastructure = true, append IRSA service account annotation.
   values = concat(
     [yamlencode(local.helm_values)],
+    var.create_aws_infrastructure ? [yamlencode({
+      serviceAccount = {
+        create = true
+        name   = var.release_name
+        annotations = {
+          "eks.amazonaws.com/role-arn" = module.aws_infrastructure[0].irsa_role_arn
+        }
+      }
+    })] : [],
     var.extra_values
   )
 

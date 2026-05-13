@@ -1,4 +1,65 @@
 # ---------------------------------------------------------------------------
+# Deployment mode
+# ---------------------------------------------------------------------------
+
+variable "create_aws_infrastructure" {
+  description = <<-EOT
+    When true, the module creates a complete AWS environment (VPC, EKS cluster,
+    S3 bucket, IAM role with IRSA) before deploying OpenObserve into it.
+    When false (default), OpenObserve is deployed into your existing cluster;
+    the aws_config block is ignored and no AWS resources are created.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "aws_config" {
+  description = "AWS infrastructure settings. Only used when create_aws_infrastructure = true."
+  type = object({
+    region             = optional(string, "us-east-1")
+    vpc_cidr           = optional(string, "10.0.0.0/16")
+    availability_zones = optional(list(string), [])
+    node_instance_type = optional(string, "") # defaults to capacity recommendation
+    node_min_count     = optional(number, 2)
+    node_max_count     = optional(number, 10)
+    node_desired_count = optional(number, 0) # defaults to capacity recommendation
+    s3_bucket_name     = optional(string, "")
+    s3_force_destroy   = optional(bool, false)
+    tags               = optional(map(string), {})
+  })
+  default = {}
+}
+
+# ---------------------------------------------------------------------------
+# Capacity planning
+# ---------------------------------------------------------------------------
+
+variable "capacity" {
+  description = <<-EOT
+    Capacity planning inputs. When set, the module computes and outputs:
+    - recommended deployment mode (single-node vs HA)
+    - recommended replica counts per component
+    - recommended EKS instance type and node count
+    - S3 storage estimate
+    - estimated monthly cost
+
+    These are informational outputs only; set replica_count explicitly to
+    override the recommendations. When create_aws_infrastructure = true,
+    the recommendations are used as defaults for aws_config if not overridden.
+
+    Reference data (256 GB/day):
+      Single-node: 5 cores, ~$179/month
+      HA:         25 cores, ~$927/month
+  EOT
+  type = object({
+    ingestion_gb_per_day = optional(number, 0)
+    data_retention_days  = optional(number, 30)
+    compression_ratio    = optional(number, 0.9)
+  })
+  default = {}
+}
+
+# ---------------------------------------------------------------------------
 # Release configuration
 # ---------------------------------------------------------------------------
 

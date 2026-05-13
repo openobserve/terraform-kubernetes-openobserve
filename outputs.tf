@@ -42,3 +42,40 @@ output "ingress_host" {
   description = "Ingress hostname, or empty string when ingress is disabled."
   value       = var.ingress.enabled ? var.ingress.host : ""
 }
+
+# ---------------------------------------------------------------------------
+# Capacity recommendations
+# ---------------------------------------------------------------------------
+
+output "capacity_recommendations" {
+  description = <<-EOT
+    Capacity planning recommendations derived from your ingestion_gb_per_day input.
+    Use these to right-size replicas, EKS nodes, and plan AWS spend before applying.
+    Set capacity.ingestion_gb_per_day to enable.
+  EOT
+  value = local.cap_enabled ? {
+    deployment_mode                 = local.recommended_mode
+    replica_counts                  = local.recommended_replicas
+    total_cpu_cores                 = local.total_cpu_cores
+    s3_storage_gb                   = local.s3_storage_gb
+    eks_instance_type               = local.recommended_instance_type
+    eks_node_count                  = local.recommended_node_count
+    estimated_monthly_cost_usd      = local.estimated_monthly_cost_usd
+    estimated_price_per_gb_ingested = local.estimated_price_per_gb_ingested
+  } : null
+}
+
+# ---------------------------------------------------------------------------
+# AWS infrastructure outputs (only when create_aws_infrastructure = true)
+# ---------------------------------------------------------------------------
+
+output "aws_infrastructure" {
+  description = "AWS resource details created by the module. Null when create_aws_infrastructure = false."
+  value = var.create_aws_infrastructure ? {
+    vpc_id           = module.aws_infrastructure[0].vpc_id
+    cluster_name     = module.aws_infrastructure[0].cluster_name
+    cluster_endpoint = module.aws_infrastructure[0].cluster_endpoint
+    s3_bucket_name   = module.aws_infrastructure[0].s3_bucket_name
+    irsa_role_arn    = module.aws_infrastructure[0].irsa_role_arn
+  } : null
+}
