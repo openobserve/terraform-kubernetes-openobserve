@@ -215,6 +215,7 @@ registry.terraform.io/modules/openobserve/openobserve/kubernetes
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | >= 1.9 |
+| <a name="requirement_aws"></a> [aws](#requirement_aws) | ~> 5.0 |
 | <a name="requirement_helm"></a> [helm](#requirement_helm) | ~> 2.16 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement_kubernetes) | ~> 2.35 |
 
