@@ -2,6 +2,10 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}
+
 locals {
   azs = length(var.availability_zones) > 0 ? var.availability_zones : slice(data.aws_availability_zones.available.names, 0, 3)
 
@@ -56,7 +60,7 @@ module "eks" {
   cluster_version = "1.31"
 
   vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.private_subnet_ids
+  subnet_ids                     = module.vpc.private_subnets
   cluster_endpoint_public_access = true
 
   enable_cluster_creator_admin_permissions = true
@@ -67,7 +71,7 @@ module "eks" {
   eks_managed_node_groups = {
     openobserve = {
       instance_types = [var.node_instance_type]
-      ami_type       = startswith(var.node_instance_type, "m7g") ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+      ami_type       = can(regex("^[a-z][0-9]+g", var.node_instance_type)) ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
 
       min_size     = var.node_min_count
       max_size     = var.node_max_count

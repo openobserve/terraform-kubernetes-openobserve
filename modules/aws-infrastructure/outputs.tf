@@ -5,7 +5,7 @@ output "vpc_id" {
 
 output "private_subnet_ids" {
   description = "Private subnet IDs (where EKS nodes run)."
-  value       = module.vpc.private_subnet_ids
+  value       = module.vpc.private_subnets
 }
 
 output "cluster_name" {
@@ -25,7 +25,7 @@ output "cluster_certificate_authority_data" {
 
 output "cluster_token" {
   description = "Authentication token for the EKS cluster."
-  value       = module.eks.cluster_token
+  value       = data.aws_eks_cluster_auth.this.token
   sensitive   = true
 }
 

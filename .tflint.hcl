@@ -14,6 +14,11 @@ rule "terraform_naming_convention" {
   output {
     format = "snake_case"
   }
+
+  # Internal computed locals use _ prefix by convention; skip name enforcement
+  locals {
+    format = "none"
+  }
 }
 
 # Require descriptions on all variables and outputs

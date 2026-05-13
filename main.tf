@@ -40,11 +40,11 @@ locals {
     imagePullSecrets = [for s in var.image_pull_secrets : { name = s }]
 
     replicaCount = {
-      ingester     = local.recommended_replicas.ingester
-      querier      = local.recommended_replicas.querier
-      router       = local.recommended_replicas.router
-      compactor    = local.recommended_replicas.compactor
-      alertmanager = local.recommended_replicas.alertmanager
+      ingester     = max(var.replica_count.ingester, local.recommended_replicas.ingester)
+      querier      = max(var.replica_count.querier, local.recommended_replicas.querier)
+      router       = max(var.replica_count.router, local.recommended_replicas.router)
+      compactor    = max(var.replica_count.compactor, local.recommended_replicas.compactor)
+      alertmanager = max(var.replica_count.alertmanager, local.recommended_replicas.alertmanager)
     }
 
     # Credentials land in a Kubernetes Secret; never stored in ConfigMap
