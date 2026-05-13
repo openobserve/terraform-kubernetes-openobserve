@@ -5,10 +5,8 @@ on:
     branches: [main]
   push:
     branches: [main]
-    paths-ignore:
-      - "**.md"
-      - "CHANGELOG.md"
-      - ".release-please-manifest.json"
+    tags:
+      - "v*"
 
 concurrency:
   group: ci-${{ github.ref }}
