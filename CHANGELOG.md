@@ -10,6 +10,27 @@ Releases: automated from [Conventional Commits](https://www.conventionalcommits.
 
 <!-- Release notes below this line are managed automatically by release-please -->
 
+## [0.0.3](https://github.com/openobserve/terraform-kubernetes-openobserve/compare/v0.0.2...v0.0.3) (2026-05-13)
+
+
+### Features
+
+* add AWS infrastructure submodule and capacity planning ([e28ee9b](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/e28ee9bb6890f2b5be3da3ac466f9f510e806571))
+
+
+### Bug Fixes
+
+* add aws to root required_providers so tests can mock it ([8ecfee0](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/8ecfee038f498c7744e98bf6d1d65351458d8d19))
+* resolve CI validate and tflint failures ([8cf9710](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/8cf971021b5421e26f9a7de4686e802fdfada8ff))
+* skip docs job on tag pushes, update README ([c510d28](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/c510d2811f947e7486588b31a160ee836680cf69))
+* trigger CI on tag pushes ([ca0ca5b](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/ca0ca5b655677b72da4530c8cb17516bddc1db0e))
+
+
+### Documentation
+
+* regenerate terraform-docs [skip ci] ([e7907f0](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/e7907f04d769d4e04a94c42d55bd98ed2c85d52a))
+* regenerate terraform-docs [skip ci] ([e10682b](https://github.com/openobserve/terraform-kubernetes-openobserve/commit/e10682b004457c3d89be20cc2a3cbd3f068ab66d))
+
 ## [0.0.2](https://github.com/openobserve/terraform-kubernetes-openobserve/compare/v0.0.1...v0.0.2) (2026-05-01)
 
 
