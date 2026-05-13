@@ -180,6 +180,7 @@ jobs:
   docs:
     name: terraform-docs
     runs-on: ubuntu-latest
+    if: github.ref_type == 'branch'
     permissions:
       contents: write
     steps:
